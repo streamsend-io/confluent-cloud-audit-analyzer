@@ -1,0 +1,16 @@
+#!/bin/bash
+#
+# this script deletes files from the work and data sub-directories. Run it to remove [possibly] confidential data or to free up disk space
+#
+
+
+WORKDIR=./work
+DATADIR=./data
+REPORTDIR=./reports
+
+echo "About to run a cleanup: delete contents of the work/ and data/"
+echo "These directories are not deleted: (bin,reports)"
+echo "Hit <return> to continue, or ctrl-c to abort"
+read hello
+
+rm -rf ${WORKDIR} ${DATADIR}
