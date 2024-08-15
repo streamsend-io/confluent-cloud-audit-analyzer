@@ -1,7 +1,7 @@
 # Confluent Cloud Audit Logs Analysis
 
 This repo provides bash shell scripts that analyze Audit Log entries for your Confluent Cloud organization.
-It runs on MacOS (not on unfortunately)
+It runs on MacOS (not on Wondows unfortunately)
 It consists of three shell scripts and a sqlite executable.
 The shell scripts are interactive - they require responses. No arguments are provided when running the scripts.
 
@@ -11,14 +11,23 @@ See the Confluent Cloud documentation for setup of the cli before running the sc
 https://docs.confluent.io/cloud/current/monitoring/audit-logging/configure.html#consume-with-confluent-cli
 The scripts in this repo require a bash shell and have been tested on MacOS.
 
+## Overview
+The reports list the service account names. No other data is listed (including topic names, message contents etc).
+It is possible to pipe the results into other systems to automate access checks, service account locking; etc.
+
+
 ## How it works
 Run 01_download_audit_log_entries.sh to download audit log entries for your Cloud Organization. These may number in millions of entries: it may take 15-30 minutes to complete.
+There is no cost associated with this and it does not impact I/O to your Confluent Cloud clusters (Audit data is stored in an entirely different system).
+You can run this as frequently as needed (not that there are API call limits on Confluent Cloud clusters).
 
 Run 02_analyze_cc_audit_entries.sh to load the latest downloaded audit log entries into a local sqlite database and run a number of queries to summarize the audit log entries.
+Downloaded audit logs (which are json) is retained in the "data" subdiretory.
+Generated reports (which are text) are retained in the "reports" subdiretory.
+Files in Data and Reports are timestamped, and not overwritten.
 
-Run 03_cleanup to delete the subdirectories and their contents (data, work). They will be automatically recreated for the next download and analyze.
+Run 03_cleanup to delete the subdirectories and their contents (data, reports, work). They will be automatically recreated for the next download and analyze.
 
-The query results are written into the reports sub directory using unique filenames for each execution (so that you can diff the files)
 
 ## How to use this
 Audit Logs provide a 10,000 foot view of client activity (producers and consiumers) for your Confluent Cloud organization.
