@@ -96,6 +96,11 @@ Hit <return> to continue, or ctrl-c to abort
 
 ## Report 
 This is a typical report of Confluent Cloud Audit entries
+### How to read this:
+Between 9am and 10am on 18/Aug/2024, service account u-8p71o5 logged 22 "AccessMetrics" audit events. 
+
+### Audit report for 18/Aug/2024 in four sections (MDS Authorize Events, Sign-In Failure Events (no data), Sign-In Success Events, All CC Audit Events)
+Note that  "All CC Audit Events" counts Audit Events per hour: there is no breakdown by service account.
 ```
 
 
