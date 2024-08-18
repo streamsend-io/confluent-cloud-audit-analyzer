@@ -3,6 +3,7 @@
 This repo provides bash shell scripts that analyze Audit Log entries for your Confluent Cloud organization.
 It runs on MacOS (not on Wondows unfortunately)
 It consists of three shell scripts and a sqlite executable.
+The database is used to generate crosstab reports for audit logs per day.
 The shell scripts are interactive - they require responses. No arguments are provided when running the scripts.
 
 ## Pre-requisites
@@ -12,19 +13,20 @@ https://docs.confluent.io/cloud/current/monitoring/audit-logging/configure.html#
 The scripts in this repo require a bash shell and have been tested on MacOS.
 
 ## Overview
+There is no cost associated with this and it does not impact I/O to your Confluent Cloud clusters (Audit data is stored in an entirely different system).
+You can run this as frequently as needed (not that there are API call limits on Confluent Cloud clusters).
 The reports list the service account names. No other data is listed (including topic names, message contents etc).
 It is possible to pipe the results into other systems to automate access checks, service account locking; etc.
 
 
 ## How it works
 Run 01_download_audit_log_entries.sh to download audit log entries for your Cloud Organization. These may number in millions of entries: it may take 15-30 minutes to complete.
-There is no cost associated with this and it does not impact I/O to your Confluent Cloud clusters (Audit data is stored in an entirely different system).
-You can run this as frequently as needed (not that there are API call limits on Confluent Cloud clusters).
 
 Run 02_analyze_cc_audit_entries.sh to load the latest downloaded audit log entries into a local sqlite database and run a number of queries to summarize the audit log entries.
 Downloaded audit logs (which are json) is retained in the "data" subdiretory.
 Generated reports (which are text) are retained in the "reports" subdiretory.
-Files in Data and Reports are timestamped, and not overwritten.
+There is one summary report per day (with four sections) and four sub-directories with a daily report for AUTH_EVENTS, OTHER_EVENTS, SIGNIN_FAIL, SIGNIN_SUCCESS.
+Files in Data and Reports are timestamped by date so older dates are retained.
 
 Run 03_cleanup to delete the subdirectories and their contents (data, reports, work). They will be automatically recreated for the next download and analyze.
 
@@ -96,191 +98,97 @@ Hit <return> to continue, or ctrl-c to abort
 This is a typical report of Confluent Cloud Audit entries
 ```
 
-cat reports/analyze_audit_logs_20230411161159.txt
-  Run at : 20230411161159
-  ---------------------------------------------
-  Loading Audit events for kafka.Authentication
-                             mds.Authorize
 
- Ignoring Audit events for other methods
-
-
-#
-# Confluent Cloud Audit Log Contents: start/end date for Audit Logs, the count of audit log entries by method by principal (username)
-#
-audit_start_time                                    audit_end_time
---------------------------------------------------  ------------------------------
-2023-04-04T04:24:36.481804981Z                      2023-04-11T08:05:36.406804015Z
-
-
-method                                              number_of_audit_entries
---------------------------------------------------  -----------------------
-mds.Authorize                                       989343
-schema-registry.Authentication                      22318
-GetKafkaClusters                                    6053
-kafka.Authentication                                5348
-GetSchemaRegistryClusters                           3511
-GetConnectors                                       3361
-GetNetworks                                         1651
-GetTransitGateways                                  1618
-GetPeerings                                         1371
-GetKSQLClusters                                     1144
-SignIn                                              791
-GetConnector                                        424
-RegisterSchema                                      167
-GetServiceAccounts                                  87
-GetEnvironments                                     86
-GetEnvironment                                      84
-GetKafkaCluster                                     80
-GetUsers                                            75
-SearchCatalogUsingAttributes                        35
-UpdateUser                                          18
-DeleteSubject                                       16
-GetServiceAccount                                   15
-CreateServiceAccount                                11
-CreateAPIKey                                        11
-DeleteServiceAccount                                10
-CreateConnector                                     9
-DeleteAPIKey                                        7
-UnbindAllRolesForPrincipal                          6
-GetAPIKeys                                          6
-DeleteKafkaCluster                                  6
-LookUpSchemaUnderSubject                            5
-DeleteConnector                                     5
-CreateOrUpdateConnector                             5
-CreateKafkaCluster                                  5
-ListPipelines                                       4
-GetInvitations                                      3
-DeleteEnvironment                                   2
-CreateKSQLCluster                                   2
-GetAPIKey                                           1
-CreateSchemaRegistryCluster                         1
-CreateEnvironment                                   1
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                   MDS Authorize Events                                                                                       
+2024-08-18                 Hour:  00    01    02    03    04    05    06    07    08    09    10    11    12    13    14    15    16    17    18    19    20    21    22    23
+Principal                                                                                                                                                                     
+Principal__________________       __________________________________________________________________________________________________________________________________          
+u-8p71o5-AccessMetrics             -     -     -     -     -     -     -     -     -    22     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+u-8p71o5-Alter                     -     -     -     -     -     -     -     -     -    17     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+u-8p71o5-AlterAccess               -     -     -     -     -     -     -     -     -     8     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+u-8p71o5-Create                    -     -     -     -     -     -     -     -     -     4     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+u-8p71o5-CreateEnvironment         -     -     -     -     -     -     -     -     -     1     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+u-8p71o5-CreateFlinkComputePoo     -     -     -     -     -     -     -     -     -     1     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+u-8p71o5-CreateSRCluster           -     -     -     -     -     -     -     -     -     1     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+u-8p71o5-Delete                    -     -     -     -     -     -     -     -     -     3     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+u-8p71o5-Describe                  -     -     -     -     -     -     -     -     -   173     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+u-8p71o5-DescribeAccess            -     -     -     -     -     -     -     -     -     6     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+u-8p71o5-Invite                    -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+u-8p71o5-View                      -     -     -     -     -     -     -     -     -     1     -     -     -     -     -     -     -     -     -     -     -     -     -     -
 
 
 
-principal                                           audit_entries_per_username
---------------------------------------------------  --------------------------
-User:sa-xxxxxx                                      819107
-User:u-xxxxxx                                       100788
-                                                    43005
-User:u-xxxxxx                                       11677
-User:u-xxxxxx                                       11323
-User:u-xxxxxx                                       9320
-User:u-xxxxxx                                       7241
-User:u-xxxxxx                                       6585
-User:u-xxxxxx                                       6305
-User:999999                                         5137
-User:u-xxxxxx                                       4107
-User:u-xxxxxx                                       3421
-User:u-xxxxxx                                       3245
-User:u-xxxxxx                                       2328
-User:u-xxxxxx                                       1922
-User:u-xxxxxx                                       1512
-User:flowserviceadmin                               440
-User:999999                                         118
-User:999999                                         45
-User:9999999                                        30
-User:9999999                                        14
-User:schemaregistryconnectadmin                     9
-User:notificationserviceadmin                       9
-User:999999                                         3
-User:schemaregistryvalidationadmin                  2
-User:ksqlscheduleradmin                             2
-None:UNKNOWN_USER                                   1
 
-#
-# Analyze kafka.Authentication events. Find the busiest day (most audit events) and show the number of auth  events per principal per hour for 24 hours
-#
-line
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                                                      Kafka Authentication Events For one Day (the day with the most Audit Data)
-2023-04-10       Hour:  00    01    02    03    04    05    06    07    08    09    10    11    12    13    14    15    16    17    18    19    20    21    22    23
-Principal
-   Logins________       ____________________________________________________________________________________________________________________________________________
-User:999999             30    30    30    30    30    30    30    30    30    39    30    30    30    30    30    30    30    30    30    30    30    30    30    30
-User:999999              -     -     -     -     -     -    44     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
 
-#
-# Analyze mds.Authorize events. Find the busiest day and show the number of MDS Authorization Requests per principle per Operation
-#
-line
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                                                            MDS Authorize Events For one Day (the day with the most Audit Data)
-2023-04-10                 Hour:  00    01    02    03    04    05    06    07    08    09    10    11    12    13    14    15    16    17    18    19    20    21    22    23
-Principal
-   Logins________                 ____________________________________________________________________________________________________________________________________________
-flowserviceadmin-Alter             -     -     -     -     -   144     -     -    74     -     -     -     -    74     -     -     -     -     -     -     -     -     -     -
-ksqlscheduleradmin-Alter           -     -     -     -     -     -     1     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-sa-xxxxx-AccessMetrics         4477  4370  4758  4636  5246  4779  4710  4625  5252  5025  5166  5040  4662  4398  4875  5000  5000  5125  5125  5000  4625  5250  5625  5250
-schemaregistryconnectadmin-Alt     -     -     -     -     -     3     -     -     1     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-schemaregistryvalidationadmin-     -     -     -     -     -     -     1     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-AccessMetrics             -     -   732   366     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-AccessWithToken           -     -   168   168     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-Alter                     -     -    35     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-ConfigureKafkaCredent     -     -   132     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-Create                    -     -     4     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-CreateCloudCluster        -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-CreateEnvironment         -     -     1     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-CreateSRCluster           -     -     1     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-Delete                    -     -    23     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-Describe                  -     -   837   108     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-View                      -     -    12     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-AccessMetrics           968  3166  4270   244     -   984  3348   750  3005  6531     -     -     -  3256   625  1625   375     -     -     -     -     -     -     -
-u-xxxxxx-AccessWithToken          56   616   336    56     -   112   228   174   232   638    58     -     -   232   116   290   406   232    58     -     -     -     -     -
-u-xxxxxx-Alter                    36    19    38     -     -    37     -     -    52    48     -     -     -    62     -    42     -     -     -     -     -     -     -     -
-u-xxxxxx-Configure                 -    15    11     -     -     1     -     -    14    22     -     -     -     8     -     1     -     -     -     -     -     -     -     -
-u-xxxxxx-ConfigureKafkaCredent   136   216   314     -     -   144   134     -   240   641     -     -     -   440     -   134   134     -     -     -     -     -     -     -
-u-xxxxxx-Contribute                -     -     -     -     -     -     1     -     1     1     -     -     -     2     -     1     -     -     -     -     -     -     -     -
-u-xxxxxx-Create                    7     9     9     -     -     7     2     -    13     8     -     -     -    14     -    10     -     -     -     -     -     -     -     -
-u-xxxxxx-CreateCloudCluster        2     1     2     -     -     2     -     -     3     2     -     -     -     4     -     2     -     -     -     -     -     -     -     -
-u-xxxxxx-CreateEnvironment         1     -     1     -     -     1     -     -     1     1     -     -     -     1     -     1     -     -     -     -     -     -     -     -
-u-xxxxxx-CreateKsqlCluster         -     1     -     -     -     -     2     -     1     1     -     -     -     2     -     1     -     -     -     -     -     -     -     -
-u-xxxxxx-CreateSRCluster           1     1     1     -     -     2     -     -     4     4     -     -     -     6     -     2     -     -     -     -     -     -     -     -
-u-xxxxxx-Delete                   26    12    32     -     -    30     -     -    36    34     -     -     -    36     -    28     -     -     -     -     -     -     -     -
-u-xxxxxx-Describe                793  1880  1450    22     -   843   535    84  1646  2496    51     -     -  2339    43  1480   290    12     4     -     -     -     -     -
-u-xxxxxx-Pause                     -     6     4     -     -     2     -     -     8     2     -     -     -     4     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-ReadConfig                -     5     4     -     -     2     -     -     7     1     -     -     -     4     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-ReadStatus                -    31    11     -     -     5     -     -    30    10     -     -     -     8     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-Resume                    -     6     4     -     -     2     -     -     8     2     -     -     -     4     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-Terminate                 -     -     -     -     -     -     1     -     1     1     -     -     -     2     -     1     -     -     -     -     -     -     -     -
-u-xxxxxx-ValidateConfig            -    11     8     -     -     -     -     -    10    15     -     -     -     4     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-View                     11     7    17     -     -    11     5     -    15    20     -     -     -    22     -    10     6     -     -     -     -     -     -     -
-u-xxxxxx-AccessWithToken           -     -     -     -     -     -     -     -     -     -     -     -     -   116     -     -    58     -     -     -     -     -     -     -
-u-xxxxxx-Alter                     -     -     -     -     -     -     -     -     -     -     -     -     -     8     -     -     4     -     -     -     -     -     -     -
-u-xxxxxx-Create                    -     -     -     -     -     -     -     -     -     -     -     -     -     4     -     -     2     -     -     -     -     -     -     -
-u-xxxxxx-Delete                    -     -     -     -     -     -     -     -     -     -     -     -     -     4     -     -     2     -     -     -     -     -     -     -
-u-xxxxxx-Describe                  -     -     -     -     -     -     -     -     -     -     -     -     -   934     -     -   380     -     -     -     -     -     -     -
-u-xxxxxx-AccessMetrics             -     -     -     -     -     -  3720     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-AccessWithToken           -     -     -     -     -     -   342     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-Alter                     -     -     -     -     -     -    89     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-AlterAccess               -     -     -     -     -     -     5     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-ConfigureKafkaCredent     -     -     -     -     -     -   268     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-Create                    -     -     -     -     -     -    22     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-CreateCloudCluster        -     -     -     -     -     -    12     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-CreateEnvironment         -     -     -     -     -     -     1     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-CreateSRCluster           -     -     -     -     -     -     9     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-Delete                    -     -     -     -     -     -    51     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-Describe                  -     -     -     -     -     -  3083     6     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-DescribeAccess            -     -     -     -     -     -     3     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-Invite                    -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-View                      -     -     -     -     -     -    19     5     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-AccessMetrics             -     -     -     -     -  3186   369     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-AccessWithToken           -     -     -    56     -   168   113     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-Alter                     -     -     -     -     -    39     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-Configure                 -     -     -     -     -    24     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-ConfigureKafkaCredent     -     -     -     -     -   255     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-Create                    -     -     -     -     -    12     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-CreateCloudCluster        -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-CreateEnvironment         -     -     -     -     -     1     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-CreateSRCluster           -     -     -     -     -     1     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-Delete                    -     -     -     -     -    32     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-Describe                  -     -     -    43     -  1125    44     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-Pause                     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-ReadConfig                -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-ReadStatus                -     -     -     -     -    56     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-Resume                    -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-ValidateConfig            -     -     -     -     -    21     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-u-xxxxxx-View                      -     -     -     -     -    13     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+line                                                                                                                                                                          
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                   Sign-In Failure Events                                                                                     
 
-```
+Principal__________________       __________________________________________________________________________________________________________________________________          
+
+
+
+
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                   Sign-In Success Events                                                                                     
+2024-08-18                 Hour:  00    01    02    03    04    05    06    07    08    09    10    11    12    13    14    15    16    17    18    19    20    21    22    23
+Principal                                                                                                                                                                     
+Principal__________________       __________________________________________________________________________________________________________________________________          
+markteehan@streamsend.io           -     -     -     -     -     -     -     -     -     7     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+
+
+
+
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                   All CC Audit Events                                                                                        
+2024-08-18                 Hour:  00    01    02    03    04    05    06    07    08    09    10    11    12    13    14    15    16    17    18    19    20    21    22    23
+   Method                                                                                                                                                                     
+   Method__________________       ___________________________________________________________________________________________________________________________________________ 
+BindRoleForPrincipal               -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+CreateComputePool                  -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+CreateStatement                    -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+CreateUser                         -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+CreateWorkspace                    -     -     -     -     -     -     -     -     -     4     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+DeleteWorkspace                    -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetAPIKeys                         -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetComputePool                     -     -     -     -     -     -     -     -     -    64     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetConnectors                      -     -     -     -     -     -     -     -     -     8     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetEnvironment                     -     -     -     -     -     -     -     -     -     4     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetEnvironments                    -     -     -     -     -     -     -     -     -    48     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetInvitations                     -     -     -     -     -     -     -     -     -     4     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetKSQLClusters                    -     -     -     -     -     -     -     -     -     6     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetKafkaClusters                   -     -     -     -     -     -     -     -     -    32     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetNetworks                        -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetPeerings                        -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetPrivateLinkAccesses             -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetPrivateLinkAttachments          -     -     -     -     -     -     -     -     -     4     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetSchemaRegistryClusters          -     -     -     -     -     -     -     -     -     6     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetServiceAccount                  -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetServiceAccounts                 -     -     -     -     -     -     -     -     -     6     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetStatement                       -     -     -     -     -     -     -     -     -   248     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetTransitGateways                 -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetUsers                           -     -     -     -     -     -     -     -     -     8     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetWorkspace                       -     -     -     -     -     -     -     -     -     4     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GrantRoleResourcesForPrincipal     -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+InviteUser                         -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+ListComputePools                   -     -     -     -     -     -     -     -     -    50     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+ListFlinkRegions                   -     -     -     -     -     -     -     -     -    10     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+ListIdentityProvider               -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+ListPipelines                      -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+ListSchemaRegistryClusters         -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+ListStatements                     -     -     -     -     -     -     -     -     -   300     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+ListWorkspaces                     -     -     -     -     -     -     -     -     -   100     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+SignIn                             -     -     -     -     -     -     -     -     -    14     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+flink.Authenticate                 -     -     -     -     -     -     -     -     -   682     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+flink.Authorize                    -     -     -     -     -     -     -     -     -   288     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+mds.Authorize                      -     -     -     -     -     -     -     -     -   478     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+schema-registry.Authentication     -     -     -     -     -     -     -     -     -    80     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+schema-registry.GetEntityByTyp     -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+schema-registry.GetQuery           -     -     -     -     -     -     -     -     -    24     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+
+
