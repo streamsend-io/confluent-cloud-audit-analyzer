@@ -3,8 +3,8 @@
 This repo provides bash shell scripts that analyze Audit Log entries for your Confluent Cloud organization.
 It runs on MacOS (not on Wondows unfortunately)
 It consists of three shell scripts and a sqlite executable.
-The database is used to generate crosstab reports for audit logs per day.
-The shell scripts are interactive - they require responses. No arguments are provided when running the scripts.
+The database is used to generate crosstab reports for Confluent Cloud audit logs per day.
+The shell scripts do not requires any responses, so they can be cron'd.
 
 ## Pre-requisites
 Access to Confluent Cloud audit logs requires the "OrganizationAdmin" RBAC role.
@@ -12,15 +12,30 @@ See the Confluent Cloud documentation for setup of the cli before running the sc
 https://docs.confluent.io/cloud/current/monitoring/audit-logging/configure.html#consume-with-confluent-cli
 The scripts in this repo require a bash shell and have been tested on MacOS.
 
-## Overview
-There is no cost associated with this and it does not impact I/O to your Confluent Cloud clusters (Audit data is stored in an entirely different system).
-You can run this as frequently as needed (not that there are API call limits on Confluent Cloud clusters).
-The reports list the service account names. No other data is listed (including topic names, message contents etc).
-It is possible to pipe the results into other systems to automate access checks, service account locking; etc.
+## Is it free?
+Yes. There is no cost associated with using these scripts. 
+Retrieving Audit records from Confluent Cloud does not impact I/O to your Confluent Cloud clusters (Audit data is stored in an entirely different system).
+Confluent Cloud retains data for several days: I recommend to run this once daily: daily reports are retained as local text files. 
+
+
+## Do Audit Reports contain sensitive data?
+No. The audit subsystem does not contain any business data.
+The reports list the Confluent Cloud service account names. No other data is listed (including topic names, message contents etc).
+
+
+## Reports are dull - what else can I do?
+It is possible to modify the scripts to pipe query results into other systems to automate access checks, service account locking; etc.
 
 
 ## How it works
-Run 01_download_audit_log_entries.sh to download audit log entries for your Cloud Organization. These may number in millions of entries: it may take 15-30 minutes to complete.
+The Confluent Cloud Audit API endpoint for your organization is queried for all data, which is downloaded as json.
+This is parsed and loaded into sqlite, using four tables.
+After checking the earliest date, and number of days in the data, a series of queries generate daily crosstab reports, which are stored in the "reports" subdirectory.
+
+
+## Operation
+Run 01_download_audit_log_entries.sh to download audit log entries for your Cloud Organization. These may number in millions of entries: it may take ~5  minutes to complete.
+
 
 Run 02_analyze_cc_audit_entries.sh to load the latest downloaded audit log entries into a local sqlite database and run a number of queries to summarize the audit log entries.
 Downloaded audit logs (which are json) is retained in the "data" subdiretory.
@@ -70,22 +85,22 @@ Starting Kafka Consumer. Use Ctrl-C to exit.
 ```
 
 
-## Analyzed Confluent Cloud Audit Entries
+## Analyze Confluent Cloud Audit Entries
 ```
 ./02_analyze_cc_audit_entries.sh
-recreateDatabaseTable (I) drop/create sqlite table cc_audit_events
-
-insertCCAuditEvents (I) Processing Confluent Cloud Audit Events:
-(I):   reading    1037696 CC audit logs from ./data/Confluent_audit_logs_20230411160011 to populate ./work/cc_audit_events.csv
-(I):   populated   994691 CC audit logs into ./work/cc_audit_events_1.csv for kafka.Authentication & mds.Authorize
-(I):   populated    43005 CC audit logs into ./work/cc_audit_events_2.csv for other event types
-(I):   populated        0 ERROR lines into ./work/cc_audit_events_ERRORS.txt
-(I):   all events 1037696 CC audit logs into ./work/cc_audit_events.csv for all event types
-
-(I):   ./work/cc_audit_events.csv successfully loaded into sqlite
-
-Results written to ./reports/analyze_audit_logs_20230411161159.txt
 ```
+recreateDatabaseTable (I) drop/create sqlite table AUTH_EVENTS
+(I):   populated      900 CC audit logs into ./work/AUTH_EVENTS.csv for kafka.Authentication & mds.Authorize
+(I):   populated        7 CC audit logs into ./work/SIGNIN_FAIL.csv for SignIn Fail
+(I):   populated       69 CC audit logs into ./work/SIGNIN_FAIL.csv for SignIn Success
+(I):   populated   161207 CC audit logs into ./work/OTHER_EVENTS.csv for other event types
+
+Audit Summary for 161207 events spanning 6 days from 2024-08-15
+2024-08-15:(62069 events) 2024-08-16:(0 events) 2024-08-17:(1104 events) 2024-08-18:(97594 events) 2024-08-19:(0 events) 2024-08-20:(0 events) 2024-08-21:(440 events)
+
+See /reports for daily audit reports
+
+
 
 ## Cleanup 
 ./03_cleanup
@@ -107,8 +122,8 @@ Note that  "All CC Audit Events" counts Audit Events per hour: there is no break
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
                                                                    MDS Authorize Events                                                                                       
 2024-08-18                 Hour:  00    01    02    03    04    05    06    07    08    09    10    11    12    13    14    15    16    17    18    19    20    21    22    23
-Principal                                                                                                                                                                     
-Principal__________________       __________________________________________________________________________________________________________________________________          
+
+Principal__________________       ____________________________________________________________________________________________________________________________________________
 u-8p71o5-AccessMetrics             -     -     -     -     -     -     -     -     -    22     -     -     -     -     -     -     -     -     -     -     -     -     -     -
 u-8p71o5-Alter                     -     -     -     -     -     -     -     -     -    17     -     -     -     -     -     -     -     -     -     -     -     -     -     -
 u-8p71o5-AlterAccess               -     -     -     -     -     -     -     -     -     8     -     -     -     -     -     -     -     -     -     -     -     -     -     -
@@ -130,7 +145,7 @@ line
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
                                                                    Sign-In Failure Events                                                                                     
 
-Principal__________________       __________________________________________________________________________________________________________________________________          
+Principal__________________       ____________________________________________________________________________________________________________________________________________
 
 
 
@@ -140,8 +155,8 @@ Principal__________________       ______________________________________________
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
                                                                    Sign-In Success Events                                                                                     
 2024-08-18                 Hour:  00    01    02    03    04    05    06    07    08    09    10    11    12    13    14    15    16    17    18    19    20    21    22    23
-Principal                                                                                                                                                                     
-Principal__________________       __________________________________________________________________________________________________________________________________          
+
+Principal__________________       ____________________________________________________________________________________________________________________________________________
 markteehan@streamsend.io           -     -     -     -     -     -     -     -     -     7     -     -     -     -     -     -     -     -     -     -     -     -     -     -
 
 
@@ -150,50 +165,63 @@ markteehan@streamsend.io           -     -     -     -     -     -     -     -  
 
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                                                                   All CC Audit Events                                                                                        
+                                                                   All CC Audit Events
 2024-08-18                 Hour:  00    01    02    03    04    05    06    07    08    09    10    11    12    13    14    15    16    17    18    19    20    21    22    23
-   Method                                                                                                                                                                     
-   Method__________________       ___________________________________________________________________________________________________________________________________________ 
-BindRoleForPrincipal               -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-CreateComputePool                  -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-CreateStatement                    -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-CreateUser                         -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-CreateWorkspace                    -     -     -     -     -     -     -     -     -     4     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-DeleteWorkspace                    -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-GetAPIKeys                         -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-GetComputePool                     -     -     -     -     -     -     -     -     -    64     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-GetConnectors                      -     -     -     -     -     -     -     -     -     8     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-GetEnvironment                     -     -     -     -     -     -     -     -     -     4     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-GetEnvironments                    -     -     -     -     -     -     -     -     -    48     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-GetInvitations                     -     -     -     -     -     -     -     -     -     4     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-GetKSQLClusters                    -     -     -     -     -     -     -     -     -     6     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-GetKafkaClusters                   -     -     -     -     -     -     -     -     -    32     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-GetNetworks                        -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-GetPeerings                        -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-GetPrivateLinkAccesses             -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-GetPrivateLinkAttachments          -     -     -     -     -     -     -     -     -     4     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-GetSchemaRegistryClusters          -     -     -     -     -     -     -     -     -     6     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-GetServiceAccount                  -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-GetServiceAccounts                 -     -     -     -     -     -     -     -     -     6     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-GetStatement                       -     -     -     -     -     -     -     -     -   248     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-GetTransitGateways                 -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-GetUsers                           -     -     -     -     -     -     -     -     -     8     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-GetWorkspace                       -     -     -     -     -     -     -     -     -     4     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-GrantRoleResourcesForPrincipal     -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-InviteUser                         -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-ListComputePools                   -     -     -     -     -     -     -     -     -    50     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-ListFlinkRegions                   -     -     -     -     -     -     -     -     -    10     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-ListIdentityProvider               -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-ListPipelines                      -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-ListSchemaRegistryClusters         -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-ListStatements                     -     -     -     -     -     -     -     -     -   300     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-ListWorkspaces                     -     -     -     -     -     -     -     -     -   100     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-SignIn                             -     -     -     -     -     -     -     -     -    14     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-flink.Authenticate                 -     -     -     -     -     -     -     -     -   682     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-flink.Authorize                    -     -     -     -     -     -     -     -     -   288     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-mds.Authorize                      -     -     -     -     -     -     -     -     -   478     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-schema-registry.Authentication     -     -     -     -     -     -     -     -     -    80     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-schema-registry.GetEntityByTyp     -     -     -     -     -     -     -     -     -     2     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-schema-registry.GetQuery           -     -     -     -     -     -     -     -     -    24     -     -     -     -     -     -     -     -     -     -     -     -     -     -
-
+___________________________       ____________________________________________________________________________________________________________________________________________
+BindRoleForPrincipal               -     -     -     -     -     -     -     -     -    58     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+CreateAPIKey                       -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -    56     -     -     -     -
+CreateComputePool                  -     -     -     -     -     -     -     -     -    58     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+CreateEnvironment                  -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -    56     -     -     -     -
+CreateServiceAccount               -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -    56     -     -     -     -
+CreateStatement                    -     -     -     -     -     -     -     -     -    58     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+CreateUser                         -     -     -     -     -     -     -     -     -    58     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+CreateWorkspace                    -     -     -     -     -     -     -     -     -   116     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+DeleteInvitation                   -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -    56     -     -     -     -
+DeleteUser                         -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -    56     -     -     -     -
+DeleteWorkspace                    -     -     -     -     -     -     -     -     -    58     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetAPIKeys                         -     -     -     -     -     -     -     -     -    58     -     -     -     -     -     -     -     -     -   168     -     -     -     -
+GetComputePool                     -     -     -     -     -     -     -     -     -  1856     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetConnectors                      -     -     -     -     -     -     -     -     -   232     -     -     -     -     -     -     -     -     -   168     -     -     -     -
+GetEnvironment                     -     -     -     -     -     -     -     -     -   116     -     -     -     -     -     -     -     -     -   168     -     -     -     -
+GetEnvironments                    -     -     -     -     -     -     -     -     -  1392     -     -     -     -     -     -     -     -     -   728     -     -     -     -
+GetInvitation                      -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -    56     -     -     -     -
+GetInvitations                     -     -     -     -     -     -     -     -     -   116     -     -     -     -     -     -     -     -     -   112     -     -     -     -
+GetKSQLClusters                    -     -     -     -     -     -     -     -     -   174     -     -     -     -     -     -     -     -     -   168     -     -     -     -
+GetKafkaCluster                    -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -    56     -     -     -     -
+GetKafkaClusters                   -     -     -     -     -     -     -     -     -   928     -     -     -     -     -     -     -     -     -   672     -     -     -     -
+GetNetworks                        -     -     -     -     -     -     -     -     -    58     -     -     -     -     -     -     -     -     -   168     -     -     -     -
+GetPeerings                        -     -     -     -     -     -     -     -     -    58     -     -     -     -     -     -     -     -     -    56     -     -     -     -
+GetPrivateLinkAccesses             -     -     -     -     -     -     -     -     -    58     -     -     -     -     -     -     -     -     -    56     -     -     -     -
+GetPrivateLinkAttachments          -     -     -     -     -     -     -     -     -   116     -     -     -     -     -     -     -     -     -    56     -     -     -     -
+GetSchemaRegistryClusters          -     -     -     -     -     -     -     -     -   174     -     -     -     -     -     -     -     -     -   168     -     -     -     -
+GetServiceAccount                  -     -     -     -     -     -     -     -     -    58     -     -     -     -     -     -     -     -     -    56     -     -     -     -
+GetServiceAccounts                 -     -     -     -     -     -     -     -     -   174     -     -     -     -     -     -     -     -     -   336     -     -     -     -
+GetStatement                       -     -     -     -     -     -     -     -     -  7192     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GetTransitGateways                 -     -     -     -     -     -     -     -     -    58     -     -     -     -     -     -     -     -     -    56     -     -     -     -
+GetUsers                           -     -     -     -     -     -     -     -     -   232     -     -     -     -     -     -     -     -     -   280     -     -     -     -
+GetWorkspace                       -     -     -     -     -     -     -     -     -   116     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+GrantRoleResourcesForPrincipal     -     -     -     -     -     -     -     -     -    58     -     -     -     -     -     -     -     -     -    56     -     -     -     -
+InviteUser                         -     -     -     -     -     -     -     -     -    58     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+ListComputePools                   -     -     -     -     -     -     -     -     -  1450     -     -     -     -     -     -     -     -     -   448     -     -     -     -
+ListCustomConnectorPlugins         -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -   168     -     -     -     -
+ListFlinkRegions                   -     -     -     -     -     -     -     -     -   290     -     -     -     -     -     -     -     -     -    56     -     -     -     -
+ListIdentityProvider               -     -     -     -     -     -     -     -     -    58     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+ListPipelines                      -     -     -     -     -     -     -     -     -    58     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+ListSchemaRegistryClusters         -     -     -     -     -     -     -     -     -    58     -     -     -     -     -     -     -     -     -   224     -     -     -     -
+ListStatements                     -     -     -     -     -     -     -     -     -  8700     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+ListWorkspaces                     -     -     -     -     -     -     -     -     -  2900     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+SignIn                             -     -     -     -     -     -     -     -     -   798   392     -     -     -     -     -     -     -     -   224     -     -     -     -
+UnbindAllRolesForPrincipal         -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -    56     -     -     -     -
+UpdateAPIKey                       -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -   112     -     -     -     -
+flink.Authenticate                 -     -     -     -     -     -     -     -     - 19778     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+flink.Authorize                    -     -     -     -     -     -     -     -     -  8352     -     -     -     -     -     -     -     -     -     -     -     -     -     -
+mds.Authorize                      -     -     -     -     -     -     -     -     - 13862     -     -     -     -     -     -     -     -     - 12880     -     -     -     -
+schema-registry.Authentication     -     -     -     -     -     -     -     -     -  2320     -     -     -     -     -     -     -     -     -  3584     -     -     -     -
+schema-registry.CreateTagDefs      -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -   224     -     -     -     -
+schema-registry.GetAllTagDefs      -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -   672     -     -     -     -
+schema-registry.GetEntityByTyp     -     -     -     -     -     -     -     -     -    58     -     -     -     -     -     -     -     -     -   168     -     -     -     -
+schema-registry.GetQuery           -     -     -     -     -     -     -     -     -   696     -     -     -     -     -     -     -     -     -   896     -     -     -     -
+schema-registry.GetTagDefsAndE     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -    56     -     -     -     -
+schema-registry.RegisterSchema     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -   224     -     -     -     -
+schema-registry.SearchCatalogU     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -     -   280     -     -     -     -
 
