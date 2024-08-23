@@ -9,11 +9,43 @@ F=confluent-audit-log-events.txt
 DT=`date +"%Y%m%d"`
 DTS=`date +"%Y%m%d%H%M%S"`
 
+CONSUME_SECONDS=45
 WORKDIR=./work
 DATADIR=./data
 REPORTDIR=./reports
 REPORT=${REPORTDIR}/download_audit_logs_${DTS}.txt
 mkdir ${DATADIR} ${WORKDIR} ${REPORTDIR} 2>/dev/null
+
+
+kill_after_cmd() {
+    local cmd="$1"
+    local delay=$2
+
+    cat <<EOF > /tmp/killAfterCmd.sh
+    cmd="${cmd}"
+    delay=${delay}
+    sleep 5    # needed to enable the consume to start up
+    # Get the PID(s) of the process(es) matching the command name
+    set -x
+    pids=\$(pgrep -f "\$cmd")
+    set +x
+
+    if [ -z "\$pids" ]; then
+        echo "No process found with command: $cmd"
+        exit 1
+    fi
+    echo "Process(es) with command '$cmd' found: \$pids"
+    echo "Waiting $delay seconds before killing..."
+    sleep "$delay"
+    for pid in \$pids; 
+    do
+        if kill -9 "\$pid" 2>/dev/null; then
+            echo "Process \$pid with command '$cmd' killed after $delay seconds."
+        fi
+    done
+EOF
+    nohup sh /tmp/killAfterCmd.sh  > /tmp/killAfterCmd.txt & 
+}
 
 
 
@@ -135,25 +167,19 @@ ConsumeAuditTopic()
   W=${WORKDIR}/ConsumerAuditTopic.out
   echo;echo
   echo "(I) Downloading Confluent Cloud audit log entries into file ${DATADIR}/${ORGANIZATION_NAME}_audit_logs_${DTS}"
-  echo "(I) Confluent Cloud Audit Logs contain the last 7 days of entries - the number of entries could number hundreds of thousands, or millions"
-  echo "(I) A download generally takes about 5 minutes with ~1GB of downloaded data"
-  echo "(I) The download is a 'consume' so it will not terminate"
-  echo "(I) In another session, monitor the file (using tail -2 ${DATADIR}/${ORGANIZATION_NAME}_audit_logs_${DTS}), and check the 'time' until it catches up ('time' is UTC)"
-  echo "(I) Then Ctrl-C this session to terminate the consumer and complete the download"
+  echo "(I) Confluent Cloud Audit Logs contain the last 7 days of entries"
+  echo "(I) this download will be automatically killed after ${CONSUME_SECONDS} seconds - (this is not an error)"
+  echo "(I) The audit log data is in ${DATADIR}/${ORGANIZATION_NAME}_audit_logs_${DTS}"
   echo;echo
+
+  kill_after_cmd "confluent kafka topic consume" ${CONSUME_SECONDS}
   confluent kafka topic consume -b confluent-audit-log-events > ${DATADIR}/${ORGANIZATION_NAME}_audit_logs_${DTS}
-  RET=$?
-  if [ "$RET" -eq 0 ]
-  then
-    echo "(I) Consume Audit topic: ok"
-    #!#rm -f ${W}
-  else
-    echo "(E) Consume Audit topic: error"
-    cat ${W} 2>/dev/null
-    echo "(E) See https://docs.confluent.io/cloud/current/monitoring/audit-logging/configure.html#access-the-audit-log-user-interface"
-    echo; echo "Check and restart ..."
-    exit 255
-  fi
+
+  LINES=`cat ${DATADIR}/${ORGANIZATION_NAME}_audit_logs_${DTS}|wc -l|sed "s/ //g"`
+  echo;echo "(I) ${CONSUME_SECONDS} seconds elapsed. Number of CC Audit logs downloaded for analysis: ${LINES}."
+  echo "(I) Now run sh 02_analyze_cc_audit_entries.sh"
+  echo;echo
+
 }
 
 GetOrganizationName()
@@ -190,6 +216,7 @@ checkDownloadedAuditLogs()
 #
 # starts here
 #
+echo;echo;echo "${DTS}: Starting download of audit logs"
 checkConfluentCliInstalled
 checkJqInstalled
 checkConfluentCliLoggedIn

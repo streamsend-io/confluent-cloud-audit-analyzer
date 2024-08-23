@@ -423,6 +423,7 @@ do
 done
 echo;echo;echo "Audit Summary for ${TOTAL_EVENT_COUNT} events spanning ${NUMBER_OF_DAYS} days from ${START_DATE}"
 echo ${SUMMARY_LINE}
+echo ${SUMMARY_LINE} >> reports/summaries.txt
 echo;echo "See /reports for daily audit reports"
 sleep 2
 echo "Report for ${PROCESS_DATE}:"

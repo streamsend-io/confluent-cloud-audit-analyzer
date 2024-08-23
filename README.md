@@ -34,7 +34,7 @@ After checking the earliest date, and number of days in the data, a series of qu
 
 
 ## Operation
-Run 01_download_audit_log_entries.sh to download audit log entries for your Cloud Organization. These may number in millions of entries: it may take ~5  minutes to complete.
+Run 01_download_audit_log_entries.sh to download audit log entries for your Cloud Organization.
 
 
 Run 02_analyze_cc_audit_entries.sh to load the latest downloaded audit log entries into a local sqlite database and run a number of queries to summarize the audit log entries.
@@ -56,32 +56,25 @@ For example if the kafka.Authentication events for a user-principal are 3600 per
 
 ## Downloading Audit data
 ```
-./01_download_audit_log_entries.sh
+20240823155358: Starting download of audit logs
 (I) check confluent cli installed: ok
-Your token has expired. You are now logged out.
+(I) check jq installed: ok
 (I) check confluent cli logged in: ok
 (I) Get Organization Name: ok
-(I) Confluent Audit-Log cluster is lkc-xxxxx
-(I) Confluent Audit-Log environment is env-xxxxx
-Now using "env-xxxxx" as the default (active) environment.
-Set Kafka cluster "lkc-xxxxx" as the active cluster for environment "env-xxxxx".
+(I) Confluent Audit-Log cluster is lkc-rk0ygp
+(I) Confluent Audit-Log environment is env-zprq9d
+(I) Confluent Audit-Log service account is sa-8p71p5
 (I) Confluent Audit Log Check Api Key: ok
+(I) Downloading Confluent Cloud audit log entries into file ./data/XXX_audit_logs_20240823155358
+(I) Confluent Cloud Audit Logs contain the last 7 days of entries
+(I) this download will be automatically killed after 45 seconds - (this is not an error)
+(I) The audit log data is in ./data/XXX_audit_logs_20240823155358
 
-
-(I) Downloading Confluent Cloud audit log entries into file ./data/Confluent_audit_logs_20230411160011
-(I) Confluent Cloud Audit Logs contain the last 7 days of entries - the number of entries could number hundreds of thousands, or millions
-(I) The download is a 'consume' so it will not terminate - in another session, monitor the file (using tail) and Ctrl-C this session whn it has caught up
-(I) This generally takes about 10-15 minutes with ~1GB of downloaded data
-
-(I) Downloading Confluent Cloud audit log entries into file ./data/Confluent_audit_logs_20230411160011
-(I) Confluent Cloud Audit Logs contain the last 7 days of entries - the number of entries could number hundreds of thousands, or millions
-(I) A download generally takes about 5 minutes with ~1GB of downloaded data
-(I) The download is a 'consume' so it will not terminate
-(I) In another session, monitor the file (using tail -2 ./data/Confluent_audit_logs_20230411160011), and check the 'time' until it catches up ('time' is UTC)
-(I) Then Ctrl-C this session to terminate the consumer and complete the download
 Starting Kafka Consumer. Use Ctrl-C to exit.
-^CStopping Consumer.
-(I) Consume Audit topic: ok
+01_download_audit_log_entries.sh: line 166: 52510 Killed: 9               confluent kafka topic consume -b confluent-audit-log-events > ${DATADIR}/${ORGANIZATION_NAME}_audit_logs_${DTS}
+
+(I) 45 seconds elapsed. Number of CC Audit logs downloaded for analysis: 5676.
+(I) Now run sh 02_analyze_cc_audit_entries.sh
 ```
 
 
