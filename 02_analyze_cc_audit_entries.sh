@@ -36,7 +36,7 @@ REPORTDIR=./reports
 
 mkdir -p ${REPORTDIR}/${TABLE1} ${REPORTDIR}/${TABLE2} ${REPORTDIR}/${TABLE3} ${REPORTDIR}/${TABLE4}
 mkdir ${DATADIR} ${WORKDIR} ${REPORTDIR} 2>/dev/null
-export SQLITE_DATAFILE=${DATADIR}/cc_audit_logs.dbf
+export SQLITE_DATAFILE=${DATADIR}/cc_audit_logs_${DTS}.dbf
 
 
 recreateDatabaseTable()
@@ -127,12 +127,12 @@ insertTable1AuthEvents()
   fi
   sleep 2
 
-  #${SQLITE} ${SQLITE_DATAFILE} 2>(grep -v 'expected 13 columns but found 3 - filling the rest with NULL' >&2)  <<EOF
   ${SQLITE} ${SQLITE_DATAFILE} <<EOF
 .mode csv
+DELETE from ${TABLE1};
 .import ${WORKDIR}/${TABLE1}.csv ${TABLE1}
 EOF
-rm -f ${WORKDIR}/${TABLE1}.csv
+rm -f ${W} ${WORKDIR}/${TABLE1}.csv
 
 }
 
@@ -167,18 +167,18 @@ insertTable2SignInFail()
   fi
   sleep 2
 
-  #${SQLITE} ${SQLITE_DATAFILE} 2>(grep -v 'expected 13 columns but found 3 - filling the rest with NULL' >&2)  <<EOF
   ${SQLITE} ${SQLITE_DATAFILE} <<EOF
 .mode csv
+DELETE from ${TABLE2};
 .import ${WORKDIR}/${TABLE2}.csv ${TABLE2}
 EOF
-rm -f ${WORKDIR}/${TABLE2}.csv
+rm -f ${W} ${WORKDIR}/${TABLE2}.csv
 }
 
 
 insertTable3SignInSuccess()
 {
-  W=${WORKDIR}/${TABLE2}.out
+  W=${WORKDIR}/${TABLE3}.out
   LINE_COUNT=`cat ${LATEST_AUDIT_DATA_DOWNLOAD}|grep -v "Headers: "|wc -l|sed "s/ //"`
   sleep 2
 
@@ -191,26 +191,24 @@ insertTable3SignInSuccess()
      ,.data.authenticationInfo.result
      ,.data.clientAddress
      ,.data.result.status
-     ,null
-     ,null
-     ] |@csv' >> ${WORKDIR}/${TABLE2}.csv 2>${WORKDIR}/${TABLE2}_ERRORS.txt
+     ] |@csv' >> ${WORKDIR}/${TABLE3}.csv 2>${WORKDIR}/${TABLE3}_ERRORS.txt
 
-  LINE_COUNT=`cat ${WORKDIR}/${TABLE2}.csv|wc -l|sed "s/ //"`
-  echo "(I):   populated  ${LINE_COUNT} CC audit logs into ${WORKDIR}/${TABLE2}.csv for SignIn Success"
+  LINE_COUNT=`cat ${WORKDIR}/${TABLE3}.csv|wc -l|sed "s/ //"`
+  echo "(I):   populated  ${LINE_COUNT} CC audit logs into ${WORKDIR}/${TABLE3}.csv for SignIn Success"
 
- if [ -f "${WORKDIR}/${TABLE2}_ERRORS.txt" ]
+ if [ -f "${WORKDIR}/${TABLE3}_ERRORS.txt" ]
   then
-    LINE_COUNT=`cat ${WORKDIR}/${TABLE2}_ERRORS.txt|wc -l|sed "s/ //"`
-    #echo "(I):   populated  ${LINE_COUNT} ERROR lines into ${WORKDIR}/${TABLE2}_ERRORS.txt"
+    LINE_COUNT=`cat ${WORKDIR}/${TABLE3}_ERRORS.txt|wc -l|sed "s/ //"`
+    #echo "(I):   populated  ${LINE_COUNT} ERROR lines into ${WORKDIR}/${TABLE3}_ERRORS.txt"
   fi
   sleep 2
 
-  #${SQLITE} ${SQLITE_DATAFILE} 2>(grep -v 'expected 13 columns but found 3 - filling the rest with NULL' >&2)  <<EOF
   ${SQLITE} ${SQLITE_DATAFILE} <<EOF
 .mode csv
-.import ${WORKDIR}/${TABLE2}.csv ${TABLE2}
+DELETE from ${TABLE3};
+.import ${WORKDIR}/${TABLE3}.csv ${TABLE3}
 EOF
-rm -f ${WORKDIR}/${TABLE2}.csv
+rm -f ${W} ${WORKDIR}/${TABLE3}.csv
 }
 
 
@@ -237,12 +235,12 @@ insertTable4AllOtherEvents()
   fi
   sleep 2
 
-  #${SQLITE} ${SQLITE_DATAFILE} 2>(grep -v 'expected 13 columns but found 3 - filling the rest with NULL' >&2)  <<EOF
   ${SQLITE} ${SQLITE_DATAFILE} <<EOF
 .mode csv
+DELETE from ${TABLE4};
 .import ${WORKDIR}/${TABLE4}.csv ${TABLE4}
 EOF
-sleep 2
+rm -f ${W} ${WORKDIR}/${TABLE4}.csv
 }
 
 
@@ -279,7 +277,7 @@ runCCAuditQuery()
   
   W=${REPORTDIR}/${!TABLE_NAME}/${PROCESS_DATE}.txt
 
-${SQLITE} ${SQLITE_DATAFILE} > ${W} <<EOF 
+${SQLITE} ${SQLITE_DATAFILE} > ${W}.PROCESSING <<EOF 
 .mode column
 .width 174
       WITH Q1 as (SELECT strftime('%Y-%m-%dT%H:%M:%S.%f',ts) as ts_msecs, 
@@ -383,7 +381,27 @@ ${SQLITE} ${SQLITE_DATAFILE} > ${W} <<EOF
 EOF
 
 # Append this to the compiled report for a single day
-cat ${W}   >> ${REPORTDIR}/${PROCESS_DATE}.txt
+
+# CC audit data ages by hour; so if we have saved a larger report for this report, for this date, previously, then dont overwrite the older (more complete) report
+if [ -f ${W} ]
+then
+   SIZE=`ls -l ${W}|awk '{print $5}'|sed "s/ //g"`
+   if [ -f  ${W}.PROCESSING ]
+   then
+     SIZE_PROCESSING=`ls -l ${W}.PROCESSING|awk '{print $5}'|sed "s/ //g"`
+     if [  "${SIZE_PROCESSING}" -lt "${SIZE}" ]
+     then
+       echo "(W) discarding ${W} (size ${SIZE_PROCESSING} bytes) becuase an earlier, more complete report exists (size ${SIZE} bytes)"
+     else
+       cp ${W}.PROCESSING ${W}
+       cat ${W}.PROCESSING   > ${REPORTDIR}/${PROCESS_DATE}.txt
+     fi
+   fi
+else
+  cp ${W}.PROCESSING ${W}
+  cat ${W}.PROCESSING  >> ${REPORTDIR}/${PROCESS_DATE}.txt
+fi
+rm -f ${W}.PROCESSING
 }
 
 
@@ -392,6 +410,7 @@ checkDownloadedAuditLogs()
 {
   W=${WORKDIR}/checkDownloadedAuditLogs.out
   LATEST_AUDIT_DATA_DOWNLOAD=`ls -1 ${DATADIR}/*audit_logs_202*|tail -1`
+  SUMMARY_LINE="${LATEST_AUDIT_DATA_DOWNLOAD}: "
 }
 
 #
@@ -429,6 +448,7 @@ sleep 2
 echo "Report for ${PROCESS_DATE}:"
 sleep 1
 cat ${REPORTDIR}/${PROCESS_DATE}.txt
+rm ${SQLITE_DATAFILE}
 
 
 echo;echo
