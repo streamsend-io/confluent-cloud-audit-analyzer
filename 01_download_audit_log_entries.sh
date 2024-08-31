@@ -146,6 +146,18 @@ ConfluentAuditCheckApiKey()
   script -q -a ${W} confluent kafka cluster use ${AUDIT_CLUSTER}       1>${W}.2 2>&1
   script -q -a ${W} confluent api-key list --resource ${AUDIT_CLUSTER} 1>${W}.3 2>&1
   RET=$?
+
+  # an api-key that was "used" before can be expired, which results in  "Error: no API key selected for resource xx"
+  # if this happens, search bash history for a prior use command and retry it automatically
+  if [ `cat ${W}.3 | grep "^          | " | tail -1 | wc -l | sed "s/ //g"` -eq 1 ]
+  then
+    # the "Current" column is blank; so no api key has currently been selected
+    echo "(W) No api-key has been selected as the current key for audit cluster ${AUDIT_CLUSTER}. This must be rerun periodically."
+    echo "(W) run this cmd to check your bash history. If it returns the cmd, then rerun it, and then rerun this script"
+    echo
+    echo 'history 1000|grep "confluent api-key use"|grep -v grep|head -1'
+  fi
+  
   if [ `cat ${W} | grep "None found." | tail -1 | wc -l | sed "s/ //g"` -eq 1 ]
   then
     #!#rm -f ${W}
